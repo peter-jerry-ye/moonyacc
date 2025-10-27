@@ -14,12 +14,26 @@
 
 ///|
 pub fn println_to_stderr(msg : String) -> Unit {
-  // TODO
-  println(msg)
+  let data = @encoding/utf8.encode(msg + "\n")
+  let mut written = 0
+  while written < data.length() {
+    let n = @wasi.stderr.fd_write([data[written:]]) catch { _ => return }
+    written += n.0.reinterpret_as_int()
+  }
 }
 
 ///|
 pub fn[T] exit(code : Int) -> T {
-  // TODO
-  abort("exit: \{code}")
+  @wasi.proc_exit(code.reinterpret_as_uint())
+  panic()
+}
+
+///|
+pub fn println(msg : String) -> Unit {
+  let data = @encoding/utf8.encode(msg + "\n")
+  let mut written = 0
+  while written < data.length() {
+    let n = @wasi.stdout.fd_write([data[written:]]) catch { _ => return }
+    written += n.0.reinterpret_as_int()
+  }
 }

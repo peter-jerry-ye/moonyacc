@@ -2,9 +2,9 @@
   "name": "moonbitlang/yacc",
   "version": "0.7.2",
   "deps": {
-    "moonbitlang/x": "0.4.30",
     "Yoorkin/ArgParser": "0.1.11",
-    "moonbitlang/ulex-runtime": "0.4.1"
+    "moonbitlang/ulex-runtime": "0.4.1",
+    "peter-jerry-ye/wasi": "0.22.4"
   },
   "readme": "README.md",
   "repository": "",

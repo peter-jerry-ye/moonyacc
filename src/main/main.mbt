@@ -13,7 +13,7 @@
 // along with this program; if not, see <https://www.gnu.org/licenses/>.
 
 ///|
-using @util {println_to_stderr, exit}
+using @util {println, println_to_stderr, exit}
 
 ///|
 fn main {
@@ -141,14 +141,22 @@ fn main {
     ],
     fn(rest) { input_file = rest },
     usage,
-    @sys.get_cli_args(),
+    @wasi.args_get() catch {
+      e => {
+        println_to_stderr("Error getting arguments: \{e}")
+        exit(1)
+      }
+    },
   )
   guard input_file != "" else {
     println_to_stderr("Input file is required")
     exit(1)
   }
-  let parser_spec_src = @fs.read_file_to_string(input_file) catch {
-    err => abort(Show::to_string(err))
+  let parser_spec_src = @wasi.Fd::open(input_file).read() catch {
+    e => {
+      println_to_stderr("Error reading input file '\{input_file}': \{e}")
+      exit(1)
+    }
   }
   if print_as_mly_without_actions {
     let out = StringBuilder::new()
@@ -178,19 +186,78 @@ fn main {
     },
   )
   fn write_map_file(file : String) raise {
-    @fs.write_string_to_file(file, source_map.to_json().stringify(indent=2))
+    @wasi.Fd::open(file).write(source_map.to_json().stringify(indent=2))
   }
 
-  if output_file == "" {
-    println(output)
-    match output_map_file {
-      Some(file) => (try? write_map_file(file)).unwrap()
-      None => ()
-    }
-  } else {
-    (try? {
-      @fs.write_string_to_file(output_file, output)
+  try {
+    if output_file == "" {
+      println(output)
+      match output_map_file {
+        Some(file) => write_map_file(file)
+        None => ()
+      }
+    } else {
+      @wasi.Fd::open(output_file).write(output)
       write_map_file(output_map_file.unwrap_or("\{output_file}.map.json"))
-    }).unwrap()
+    }
+  } catch {
+    e => {
+      println_to_stderr("Error writing output: \{e}")
+      exit(1)
+    }
+  }
+}
+
+///|
+fn @wasi.Fd::write(fd : @wasi.Fd, str : String) -> Unit raise {
+  let data = @encoding/utf8.encode(str)
+  let mut written = 0
+  while written < data.length() {
+    let n = fd.fd_write([data[written:]])
+    written += n.0.reinterpret_as_int()
+  }
+}
+
+///|
+fn @wasi.Fd::read(fd : @wasi.Fd) -> String raise {
+  let stat = fd.fd_filestat_get()
+  let size = stat.size
+  let buffer = FixedArray::make(size.0.to_int(), b'\x00')
+  let buf = FixedArray::make(1024, b'\x00')
+  let mut read = 0UL
+  while read < size.0 {
+    let n = fd.fd_read([buf])
+    buf.blit_to(buffer, len=n.0.reinterpret_as_int(), dst_offset=read.to_int())
+    read += n.0.to_uint64()
+  }
+  @encoding/utf8.decode(buffer.unsafe_reinterpret_as_bytes())
+}
+
+///|
+fn @wasi.Fd::open(path : String) -> @wasi.Fd raise {
+  for i = 3; ; i = i + 1 {
+    let dir = @wasi.Fd(i).fd_prestat_dir_name() catch {
+      _ => fail("Failed to find ")
+    }
+    if path.strip_prefix(dir) is Some(rel_path) {
+      let rel_path = if rel_path is ['/', ..] { rel_path[1:] } else { rel_path }
+      return @wasi.Fd(i).path_open(
+        @wasi.LookupFlags::new(),
+        rel_path.to_string(),
+        @wasi.OpenFlags::new(),
+        @wasi.Rights::new()
+        .set(Fd_read)
+        .set(Fd_seek)
+        .set(Fd_write)
+        .set(Path_open)
+        .set(Fd_filestat_get),
+        @wasi.Rights::new(),
+        @wasi.FdFlags::new(),
+      ) catch {
+        e => fail("Failed to open file '\{path}': \{e}")
+      }
+    } else {
+      continue
+    }
   }
 }
