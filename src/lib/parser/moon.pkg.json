@@ -6,7 +6,7 @@
       "output": "lexer.mbt"
     },
     {
-      "command": "node $mod_dir/boot/moonyacc.cjs --input-mode pull $input -o $output",
+      "command": "iwasm --module-path=$mod_dir/boot --dir=$mod_dir $mod_dir/boot/moonyacc.wasm --input-mode pull $input -o $output",
       "input": "parser.mbty",
       "output": "parser.mbt"
     }

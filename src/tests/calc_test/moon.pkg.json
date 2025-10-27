@@ -1,7 +1,7 @@
 {
   "pre-build": [
     {
-      "command": "node $mod_dir/boot/moonyacc.cjs $input --input-mode pull -o $output",
+      "command": "iwasm --module-path=$mod_dir/boot --dir=$mod_dir $mod_dir/boot/moonyacc.wasm $input --input-mode pull -o $output",
       "input": "calc.mbty",
       "output": "calc.mbt"
     }
