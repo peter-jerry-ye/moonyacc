@@ -244,10 +244,9 @@ fn @wasi.Fd::open(path : String) -> @wasi.Fd raise {
       return @wasi.Fd(i).path_open(
         @wasi.LookupFlags::new(),
         rel_path.to_string(),
-        @wasi.OpenFlags::new(),
+        @wasi.OpenFlags::new().set(Create),
         @wasi.Rights::new()
         .set(Fd_read)
-        .set(Fd_seek)
         .set(Fd_write)
         .set(Path_open)
         .set(Fd_filestat_get),
