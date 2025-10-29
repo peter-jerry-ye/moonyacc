@@ -239,6 +239,7 @@ fn @wasi.Fd::open(path : String) -> @wasi.Fd raise {
     let dir = @wasi.Fd(i).fd_prestat_dir_name() catch {
       _ => fail("Failed to find ")
     }
+    let dir = dir.trim(char_set="\u{0}") // for wasmer
     if path.strip_prefix(dir) is Some(rel_path) {
       let rel_path = if rel_path is ['/', ..] { rel_path[1:] } else { rel_path }
       return @wasi.Fd(i).path_open(
