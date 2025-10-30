@@ -16,6 +16,9 @@
 using @util {println, println_to_stderr, exit}
 
 ///|
+const VERSION = "0.1.1"
+
+///|
 fn main {
   let usage =
     #|Usage: moonyacc [options] <input-file>
@@ -32,7 +35,7 @@ fn main {
   let mut token_payload_rewrite : @driver.TokenPayloadRewrite = NoRewrite
   let mut force_int_position : Bool = false
   let mut print_as_mly_without_actions : Bool = false
-  @ArgParser.parse(
+  let help = @ArgParser.parse(
     [
       (
         "--print-as-mly-without-actions",
@@ -133,7 +136,7 @@ fn main {
         "--version",
         "-v",
         Unit(fn() {
-          println("moonyacc 0.1.0")
+          println("moonyacc \{VERSION}")
           exit(0)
         }),
         "Show version",
@@ -147,7 +150,16 @@ fn main {
         exit(1)
       }
     },
-  )
+  ) catch {
+    e => {
+      println_to_stderr("Error parsing arguments: \{e}")
+      exit(1)
+    }
+  }
+  if help is Some(help) {
+    println(help)
+    exit(0)
+  }
   guard input_file != "" else {
     println_to_stderr("Input file is required")
     exit(1)

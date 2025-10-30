@@ -1,7 +1,9 @@
 [package]
 name = 'peter-jerry-ye/moonyacc'
-version = '0.1.0'
+version = '0.1.1'
 description = 'The moonyacc'
+readme = 'README.md'
+license = 'GPL-2.0-only'
 
 # See more keys and definitions at https://docs.wasmer.io/registry/manifest
 
