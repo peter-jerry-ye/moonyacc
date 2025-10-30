@@ -1,0 +1,19 @@
+[package]
+name = 'peter-jerry-ye/moonyacc'
+version = '0.1.0'
+description = 'The moonyacc'
+
+# See more keys and definitions at https://docs.wasmer.io/registry/manifest
+
+[[module]]
+name = 'moonyacc'
+source = 'boot/moonyacc.wasm'
+abi = 'wasi'
+
+[module.interfaces]
+wasi = '0.1.0-unstable'
+
+[[command]]
+name = 'moonyacc'
+module = 'moonyacc'
+runner = 'wasi'

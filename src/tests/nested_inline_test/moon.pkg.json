@@ -1,7 +1,7 @@
 {
   "pre-build": [
     {
-      "command": "iwasm --module-path=$mod_dir/boot --dir=$mod_dir $mod_dir/boot/moonyacc.wasm $input -o $output",
+      "command": "wasmer run . --dir=$mod_dir -- $input -o $output",
       "input": "inline.mbty",
       "output": "inline.mbt"
     }
