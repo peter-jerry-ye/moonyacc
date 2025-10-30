@@ -152,7 +152,7 @@ fn main {
     println_to_stderr("Input file is required")
     exit(1)
   }
-  let parser_spec_src = @wasi.Fd::open(input_file).read() catch {
+  let parser_spec_src = read_text_file(input_file) catch {
     e => {
       println_to_stderr("Error reading input file '\{input_file}': \{e}")
       exit(1)
@@ -186,7 +186,7 @@ fn main {
     },
   )
   fn write_map_file(file : String) raise {
-    @wasi.Fd::open(file).write(source_map.to_json().stringify(indent=2))
+    write_text_file(file, source_map.to_json().stringify(indent=2))
   }
 
   try {
@@ -197,7 +197,7 @@ fn main {
         None => ()
       }
     } else {
-      @wasi.Fd::open(output_file).write(output)
+      write_text_file(output_file, output)
       write_map_file(output_map_file.unwrap_or("\{output_file}.map.json"))
     }
   } catch {
@@ -209,7 +209,12 @@ fn main {
 }
 
 ///|
-fn @wasi.Fd::write(fd : @wasi.Fd, str : String) -> Unit raise {
+fn write_text_file(path : StringView, str : StringView) -> Unit raise {
+  let fd = @wasi.Fd::open(
+    path.to_string(),
+    open_flags=@wasi.OpenFlags::new().set(Create).set(Trunc),
+    rights=@wasi.Rights::new().set(Fd_write),
+  )
   let data = @encoding/utf8.encode(str)
   let mut written = 0
   while written < data.length() {
@@ -219,7 +224,11 @@ fn @wasi.Fd::write(fd : @wasi.Fd, str : String) -> Unit raise {
 }
 
 ///|
-fn @wasi.Fd::read(fd : @wasi.Fd) -> String raise {
+fn read_text_file(path : StringView) -> String raise {
+  let fd = @wasi.Fd::open(
+    path.to_string(),
+    rights=@wasi.Rights::new().set(Fd_read).set(Fd_filestat_get),
+  )
   let stat = fd.fd_filestat_get()
   let size = stat.size
   let buffer = FixedArray::make(size.0.to_int(), b'\x00')
@@ -234,10 +243,14 @@ fn @wasi.Fd::read(fd : @wasi.Fd) -> String raise {
 }
 
 ///|
-fn @wasi.Fd::open(path : String) -> @wasi.Fd raise {
+fn @wasi.Fd::open(
+  path : String,
+  open_flags? : @wasi.OpenFlags = @wasi.OpenFlags::new(),
+  rights? : @wasi.Rights = @wasi.Rights::new(),
+) -> @wasi.Fd raise {
   for i = 3; ; i = i + 1 {
     let dir = @wasi.Fd(i).fd_prestat_dir_name() catch {
-      _ => fail("Failed to find ")
+      _ => fail("Failed to find preopened directories")
     }
     let dir = dir.trim(char_set="\u{0}") // for wasmer
     if path.strip_prefix(dir) is Some(rel_path) {
@@ -245,12 +258,8 @@ fn @wasi.Fd::open(path : String) -> @wasi.Fd raise {
       return @wasi.Fd(i).path_open(
         @wasi.LookupFlags::new(),
         rel_path.to_string(),
-        @wasi.OpenFlags::new().set(Create),
-        @wasi.Rights::new()
-        .set(Fd_read)
-        .set(Fd_write)
-        .set(Path_open)
-        .set(Fd_filestat_get),
+        open_flags,
+        rights,
         @wasi.Rights::new(),
         @wasi.FdFlags::new(),
       ) catch {
